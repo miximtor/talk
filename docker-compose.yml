@@ -15,7 +15,7 @@ services:
         volumes:
             - "./etc/mysql:/etc/mysql"
         ports:
-            - "3306:3306"
+            - "127.0.0.1:3306:3306"
         environment:
             MYSQL_ROOT_PASSWORD: "lzw981018"
         restart: always
@@ -25,7 +25,7 @@ services:
         volumes:
             - "./etc/redis:/etc/redis"
         ports:
-            - "6379:6379"
+            - "127.0.0.1:6379:6379"
         command: redis-server /etc/redis/redis.conf
         restart: always
 
