@@ -1,5 +1,16 @@
 version: '3'
 services:
+    node:
+        image: node:13.10.1
+        volumes:
+            - "./:/usr/local/app"
+        working_dir: "/usr/local/app"
+        command: "npm run install_run"
+        depends_on:
+          - nginx
+          - mysql
+          - redis
+
     nginx:
         image: "nginx:1.17.8"
         volumes:
