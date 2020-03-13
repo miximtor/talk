@@ -1,37 +1,77 @@
-CREATE DATABASE talk;
-USE talk;
+create schema talk;
 
-DROP TABLE IF EXISTS account;
-CREATE TABLE account (
-    auto_id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    login_id VARCHAR(255) DEFAULT '' UNIQUE,
-    login_password VARCHAR(255) DEFAULT '',
-    email VARCHAR(255) DEFAULT '',
-    phone VARCHAR(255) DEFAULT '',
-    avatar VARCHAR(255) DEFAULT '',
-    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_modify_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-)
 
-DROP TABLE IF EXISTS account_relation;
-CREATE TABLE account_relation (
-	auto_id BIGINT PRIMARY KEY AUTO_INCREMENT,
-	master_login_id VARCHAR(255) NOT NULL,
-	slave_login_id VARCHAR(255) NOT NULL,
-	relation BIGINT DEFAULT 1,
-	create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_modify_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+drop table if exists talk.account;
+create table talk.account (
+	account_id serial primary key,
+	account_type varchar(255) default 'personal',
+	login_id varchar(255) default '' unique,
+	login_password varchar(255) default '',
+	nick varchar(255) default '',
+	email varchar(255) default '',
+	phone varchar(255) default '',
+	avatar varchar(255) default '',
+	create_time timestamp default current_timestamp
 );
 
-SELECT * FROM account;
-SELECT * FROM account_relation;
-DELETE FROM account;
-DELETE FROM account_relation;
+
+drop view if exists talk.account_nonsens;
+create view talk.account_nonsens as select account_id,login_id,account_type,nick,email,phone,avatar from talk.account;
 
 
-INSERT INTO account SET login_id = 'maxtorm', login_password = 'lzw981018';
+drop table if exists talk.relation;
+create table talk.relation (
+	relation_id serial primary key,
+	relation_type varchar(255) default '',
+	master_account_id bigint default 0,
+	slave_account_id bigint default 0,
+	relation_identity varchar(255) default ''
+);
 
-INSERT INTO account_relation SET master_login_id = 'maxtorm', slave_login_id = 'maxtorm12138';
-INSERT INTO account_relation SET master_login_id = 'maxtorm12138', slave_login_id = 'maxtorm';
 
-SELECT account.login_id, account.avatar, account.email, account.phone FROM account LEFT JOIN account_relation on account.login_id = account_relation.slave_login_id WHERE account_relation.master_login_id='maxtorm';
+drop view if exists talk.contacts;
+create view talk.contacts 
+		as 
+with slave as (
+	select 
+		talk.relation.master_account_id,
+		talk.relation.relation_type,
+		talk.relation.relation_identity,
+		talk.account.account_type,
+		talk.account.login_id,
+		talk.account.nick,
+		talk.account.email,
+		talk.account.phone,
+		talk.account.avatar
+	from 
+		talk.account left join talk.relation on talk.account.account_id = talk.relation.slave_account_id
+)
+select 
+	talk.account.account_id as master_account_id,
+	slave.account_type,
+	slave.login_id,
+	slave.nick,
+	slave.email,
+	slave.phone,
+	slave.avatar,
+	slave.relation_type,
+	slave.relation_identity
+from
+	talk.account left join slave on talk.account.account_id = slave.master_account_id;
+
+select * from talk.contacts;
+select * from talk.relation;
+select * from talk.account;
+
+
+insert into talk.relation(relation_type ,master_account_id ,slave_account_id ,relation_identity ) values ('one-one', 1, 2, 'friend');
+insert into talk.relation(relation_type ,master_account_id ,slave_account_id ,relation_identity ) values ('one-one', 2, 1, 'friend');
+insert into talk.relation(relation_type ,master_account_id ,slave_account_id ,relation_identity ) values ('one-one', 1, 3, 'friend');
+insert into talk.relation(relation_type ,master_account_id ,slave_account_id ,relation_identity ) values ('one-one', 3, 1, 'friend');
+insert into talk.relation(relation_type ,master_account_id ,slave_account_id ,relation_identity ) values ('one-one', 1, 4, 'friend');
+insert into talk.relation(relation_type ,master_account_id ,slave_account_id ,relation_identity ) values ('one-one', 1, 5, 'friend');
+insert into talk.relation(relation_type ,master_account_id ,slave_account_id ,relation_identity ) values ('one-one', 1, 6, 'friend');
+insert into talk.relation(relation_type ,master_account_id ,slave_account_id ,relation_identity ) values ('one-one', 1, 7, 'friend');
+insert into talk.relation(relation_type ,master_account_id ,slave_account_id ,relation_identity ) values ('one-one', 1, 8, 'friend');
+insert into talk.relation(relation_type ,master_account_id ,slave_account_id ,relation_identity ) values ('one-one', 1, 9, 'friend');
+insert into talk.relation(relation_type ,master_account_id ,slave_account_id ,relation_identity ) values ('one-one', 1, 10, 'friend');

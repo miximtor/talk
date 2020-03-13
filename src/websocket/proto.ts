@@ -6,7 +6,6 @@ export interface IStandardResponse {
 
 export interface IStandardRequest {
     token: string
-    login_id: string
 }
 
 
@@ -15,3 +14,12 @@ export interface IAuthRequest extends IStandardRequest{
 
 export interface IAuthResponse extends IStandardResponse{
 }
+
+export interface IMessage {
+    from: string,
+    to: string,
+    type: string,
+    content: string,
+    timestamp: string
+}
+

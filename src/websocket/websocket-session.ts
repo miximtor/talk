@@ -1,82 +1,76 @@
 import * as WebSocket from 'ws';
-import {RedisClient} from '../storage/redis';
-import {MySQLClient} from "../storage/mysql";
-
-import {RowDataPacket} from 'mysql2';
+import {RedisClient} from '../util/redis';
 
 import {Manager} from "./websocket-session-manager";
 import {Logger} from "../util/log";
 import {promisify} from "util";
 import {v4 as UUIDv4} from 'uuid';
+import {IncomingMessage} from "http";
 
 import * as Proto from "./proto";
-import {response} from "express";
 
 
 export class WebSocketSession {
     private logger: Logger;
     private readonly session_id: string;
-    private token: string;
-    private login_id: string;
+    private account_id: number;
+    private readonly token: string;
 
 
-    constructor(private ws: WebSocket) {
+    constructor(private socket: WebSocket, private request: IncomingMessage) {
         this.logger = new Logger(this.constructor.name);
         this.session_id = UUIDv4();
+        const url = new URL(request.url, `http://${request.headers.host}`);
+        this.token = url.searchParams.get('token');
         this.logger.log.info(`${this.session_id} created`);
     }
 
     public run() {
-        const ws_send = promisify(this.ws.send).bind(this.ws);
-        this.ws.once("message", (data: string) => {
-            this.authentication(JSON.parse(data))
-                .then(response => {
-                    if (!response.ok) {
-                        ws_send(JSON.stringify(response))
-                            .then(_ => {
-                                this.ws.close(response.code, response.reason);
-                            })
-                    } else {
-                        Manager.register(this);
-                        this.start_message_dispatch();
-                        ws_send(JSON.stringify(response));
-                    }
-                });
-        });
+        (async () => {
+            const success = await this.authentication();
+            if (!success) {
+                this.socket.close(4000, '连接认证失败');
+                return;
+            }
+
+            Manager.register(this);
+            this.socket.on("close", (code, reason) => {
+                this.on_client_close(code, reason);
+            });
+
+            this.socket.send(JSON.stringify({ok: true}));
+        })();
+    }
+
+    private on_client_close(code: number, reason: string) {
+        this.logger.log.info(`${this.session_id} closed ${code}-"${reason}"`);
+        Manager.remove_by_session(this);
+    }
+
+
+    private async authentication() {
+        try {
+            const multi = RedisClient.multi();
+            multi.expire(this.token, 240).get(this.token);
+            const result = await promisify(multi.exec).bind(multi)();
+            if (result[0] === 0) {
+                return false;
+            }
+            this.account_id = Number.parseInt(result[1]);
+            await promisify(RedisClient.setex).bind(RedisClient)(this.account_id.toString(), 240, this.token);
+            return true;
+        } catch (e) {
+            this.logger.log.error(`${this.session_id} authentication error ${e}`);
+            return false;
+        }
     }
 
     public get_token(): string {
         return this.token;
     }
 
-    public get_login_id(): string {
-        return this.login_id;
+    public get_account_id(): number {
+        return this.account_id;
     }
 
-    public notify_destroy() {
-
-    }
-
-    private start_message_dispatch() {
-        this.ws.on("close", (code, reason) => {
-            this.logger.log.info(`${this.session_id} closed with code:"${code}" reason:"${reason}"`);
-            Manager.remove_by_session(this);
-        });
-    }
-
-    private authentication(request: Proto.IAuthRequest): Promise<Proto.IAuthResponse> {
-        const redis_get = promisify(RedisClient.get).bind(RedisClient);
-        return redis_get(request.token)
-            .then(login_id => {
-                if (request.login_id !== login_id) {
-                    this.logger.log.error(`${this.session_id} authentication failed`);
-                    return {ok: false, reason: "Token错误", code: 4000};
-                } else {
-                    this.logger.log.debug(`${this.session_id} get login_id "${login_id}"`);
-                    this.token = request.token;
-                    this.login_id = request.login_id;
-                    return {ok: true, reason: '', code: 0};
-                }
-            });
-    }
 }

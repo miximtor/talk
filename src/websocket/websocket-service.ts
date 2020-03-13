@@ -15,10 +15,11 @@ export class WebSocketService {
     public run() {
         this.logger.log.info(`${this.service_id} listening on ${this.port}`);
         this.server = new WebSocket.Server({port: this.port});
-        this.server.on("connection", ((socket, request) => {
+        this.server.on("connection", (socket, request) => {
             this.logger.log.info(`${this.service_id} new connection established ${request.connection.remoteAddress}:${request.connection.remotePort}`);
-            const session = new WebSocketSession(socket);
+            const session = new WebSocketSession(socket, request);
             session.run();
-        }));
+        });
     }
 }
+

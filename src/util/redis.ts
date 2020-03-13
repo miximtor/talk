@@ -5,7 +5,6 @@ class RedisConnection {
     constructor() {
         this.client = Redis.createClient(6379,'redis');
     }
-
 }
 
 export let RedisClient = new RedisConnection().client;
