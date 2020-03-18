@@ -8,18 +8,17 @@ import {PostgresPool} from "../util/postgres";
 class RelationRouter {
     public router;
     private readonly router_id: string;
-    private logger: Logger;
+    private static logger = new Logger('RelationRouter');
 
     constructor() {
-        this.logger = new Logger(this.constructor.name);
         this.router = express.Router();
-        this.router.use('/getcontacts', this.get_contacts);
+        this.router.post('/getcontacts', (req, res) => this.get_contacts(req, res));
         this.router_id = UUIDv4();
     }
 
     async get_contacts(req: express.Request, res: express.Response) {
         const conn = res.locals.db_conn;
-        const selectQuery = "select * from talk.contacts where master_account_id = $1 and relation_identity in ($2,$3)";
+        const selectQuery = "select * from talk.contacts where master_account_id = $1 and relation_identity in ($2,$3) order by login_id";
         const selectParam = [res.locals.account_id, 'friend', 'admin'];
         const result = await conn.query(selectQuery, selectParam);
         result.rows.forEach(slave => delete slave.master_account_id);

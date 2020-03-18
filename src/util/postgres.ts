@@ -13,14 +13,14 @@ export const PostgresPool = new Postgres.Pool({
 });
 
 export async function pool_alloc(req: express.Request, res: express.Response, next) {
-    logger.log.info(`${req.method} ${req.path} await connection alloc`);
+    logger.log.info(`${res.locals.request_id} ${req.method} ${req.path} await connection alloc`);
     const conn = await PostgresPool.connect();
-    logger.log.info(`${req.method} ${req.path} connection alloc success`);
+    logger.log.info(`${res.locals.request_id} ${req.method} ${req.path} connection alloc success`);
     res.locals.db_conn = conn;
     try {
         next();
     } finally {
         conn.release();
-        logger.log.info(`${req.method} ${req.path} connection released`);
+        logger.log.info(`${res.locals.request_id} ${req.method} ${req.path} connection released`);
     }
 }

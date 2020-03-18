@@ -43,7 +43,8 @@ services:
         restart: always
 
     redis:
-        image: "redis:5.0.7-alpine"
+        build:
+          ./etc/redis
         volumes:
             - "./etc/redis:/etc/redis"
         ports:
