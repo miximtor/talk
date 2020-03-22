@@ -19,7 +19,6 @@ class AccountRouter {
         this.router.post('/register', (req,res) => this.register(req,res));
         this.router.post('/checkloginid', (req, res) => this.check_login_id(req,res));
         this.router.post('/login', (req,res) => this.login(req, res));
-        this.router.post('/logout', (req, res) => this.logout(req, res));
         this.router.post('/getpersonalinfo', (req,res) => this.get_personal_info(req, res));
         this.router.post('/updatepersonalinfo', (req, res) => this.update_personal_info(req, res));
         this.router.post('/getsecurityquestion', (req, res) => this.get_security_question(req, res));
@@ -81,11 +80,6 @@ class AccountRouter {
         }
         const token = await new Token().init(result.rows[0].account_id);
         res.send({ok: true, token: token});
-    }
-
-    async logout(req: express.Request, res: express.Response) {
-        await new Token(req.body.token).invalidate();
-        res.send({ok: true});
     }
 
     async get_personal_info(req: express.Request, res: express.Response) {

@@ -22,8 +22,10 @@ class MessageRouter {
     async send(req: express.Request, res: express.Response) {
         let conn = res.locals.db_conn;
         const message = req.body.message;
-        let result = await conn.query("select account_type from talk.account where login_id = $1", [message.to]);
+        let result = await conn.query("select account_id, account_type from talk.account where login_id = $1 limit 1", [message.to]);
         if (result.rows[0].account_type === 'personal') {
+            delete message.token;
+            message.to_account_id = result.rows[0].account_id;
             await promisify(RedisClient.publish).bind(RedisClient)('message', JSON.stringify(message));
             res.send({ok: true});
         } else {

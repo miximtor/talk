@@ -17,7 +17,8 @@
     "nodemon": "^2.0.2",
     "log4js": "^6.1.2",
     "password-hash": "^1.2.2",
-    "uuid": "^7.0.2"
+    "uuid": "^7.0.2",
+    "ali-oss": "^6.5.1"
   },
   "repository": {
     "type": "git",

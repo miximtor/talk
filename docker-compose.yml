@@ -10,8 +10,8 @@ services:
         environment:
             LANG: "zh_CN.UTF-8"
             LC_ALL: "zh_CN.UTF-8"
+        restart: always
         depends_on:
-          - nginx
           - postgres
           - redis
 
@@ -27,6 +27,8 @@ services:
             LANG: "zh_CN.UTF-8"
             LC_ALL: "zh_CN.UTF-8"
         restart: always
+        depends_on:
+          - node
 
     postgres:
         build:
