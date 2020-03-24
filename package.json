@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "debug": "cross-env nodemon --watch 'src/' -e ts --exec 'ts-node' ./src/main.ts",
-    "install_run": "npm install && nodemon --watch 'src/' -e ts --exec 'ts-node' ./src/main.ts"
+    "install_run": "npm install && nodemon --watch 'src/' -e ts --exec 'ts-node' ./src/main.ts",
+    "test_mq": "ts-node ./src/demo.ts"
   },
   "dependencies": {
     "express": "^4.17.1",
@@ -18,7 +19,7 @@
     "log4js": "^6.1.2",
     "password-hash": "^1.2.2",
     "uuid": "^7.0.2",
-    "ali-oss": "^6.5.1"
+    "amqplib": "^0.5.5"
   },
   "repository": {
     "type": "git",
@@ -36,6 +37,7 @@
     "@types/pg": "^7.14.2",
     "@types/redis": "^2.8.16",
     "@types/ws": "^7.2.2",
-    "@types/node": "^13.9.0"
+    "@types/node": "^13.9.0",
+    "@types/amqplib": "^0.5.13"
   }
 }

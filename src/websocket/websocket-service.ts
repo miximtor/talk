@@ -32,10 +32,10 @@ export class WebSocketService {
             })
         });
 
-        this.websocket_server.on("connection", ((socket, request, token, account_id) => {
+        this.websocket_server.on("connection", async (socket, request, token, account_id) => {
             const session = new WebSocketSession(socket, token, account_id);
-            session.run();
-        }));
+            await session.run();
+        });
 
         this.logger.log.info(`${this.service_id} listening on ${this.port}`);
         this.http_server.listen(3001);

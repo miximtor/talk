@@ -2,11 +2,10 @@ import {Logger} from "../util/log";
 
 import * as express from 'express';
 
-import {RedisClient} from "../util/redis";
-
 import {v4 as UUIDv4} from 'uuid';
 import {promisify} from "util";
 import {Token} from "../util/token";
+import {queue} from "../util/message-queue";
 
 class AccountRouter {
     public router;
@@ -44,7 +43,7 @@ class AccountRouter {
             "answer1, " +
             "answer2, " +
             "answer3) " +
-            "values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)";
+            "values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) returning account_id";
         const insertParameter =
             [
                 'personal',
@@ -56,7 +55,8 @@ class AccountRouter {
                 req.body.avatar,
                 req.body.question1, req.body.question2, req.body.question3,
                 hash.generate(req.body.answer1),hash.generate(req.body.answer2),hash.generate(req.body.answer3)];
-        await conn.query(insertQuery, insertParameter);
+        const result = await conn.query(insertQuery, insertParameter);
+        await queue.create_queue(result.rows[0].account_id);
         res.send({ok: true, reason: ''});
     }
 

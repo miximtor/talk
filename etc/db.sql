@@ -69,7 +69,9 @@ select * from talk.relation;
 select * from talk.account;
 select * from talk.account_nonsens;
 
-insert into talk.relation(relation_type, master_account_id, slave_account_id, relation_identity) values('one-one', 3, 2, 'friend');
-insert into talk.relation(relation_type, master_account_id, slave_account_id, relation_identity) values('one-one', 2, 3, 'friend');
+select * from talk.account_nonsens where login_id like '%max%' and login_id not in (select login_id from talk.contacts where master_account_id = 3) and account_id != 3;
+
+insert into talk.relation(relation_type, master_account_id, slave_account_id, relation_identity) values('one-one', 11, 12, 'friend');
+insert into talk.relation(relation_type, master_account_id, slave_account_id, relation_identity) values('one-one', 12, 11, 'friend');
 insert into talk.relation(relation_type, master_account_id, slave_account_id, relation_identity) values('one-one', 3, 4, 'friend');
 insert into talk.relation(relation_type, master_account_id, slave_account_id, relation_identity) values('one-one', 4, 3, 'friend');

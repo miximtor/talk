@@ -7,6 +7,7 @@ import {RedisClient} from "../util/redis";
 import {v4 as UUIDv4} from 'uuid';
 
 import {promisify} from "util";
+import {queue} from "../util/message-queue";
 
 class MessageRouter {
     public router;
@@ -25,8 +26,7 @@ class MessageRouter {
         let result = await conn.query("select account_id, account_type from talk.account where login_id = $1 limit 1", [message.to]);
         if (result.rows[0].account_type === 'personal') {
             delete message.token;
-            message.to_account_id = result.rows[0].account_id;
-            await promisify(RedisClient.publish).bind(RedisClient)('message', JSON.stringify(message));
+            await queue.public(message, result.rows[0].account_id);
             res.send({ok: true});
         } else {
         }

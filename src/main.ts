@@ -8,12 +8,15 @@ import {Logger} from "./util/log";
 import {coloring} from "./util/coloring";
 import {Token} from "./util/token";
 import {pool_alloc} from "./util/postgres";
+import {queue} from "./util/message-queue";
 
-function main() {
+async function main() {
     const service = new WebSocketService();
     const app = express();
-    const logger = new Logger('HTTPService');
 
+    await queue.init();
+
+    const logger = new Logger('HTTPService');
     app.use(express.json());
     app.use(coloring);
     app.use(pool_alloc);
@@ -29,4 +32,4 @@ function main() {
     });
 }
 
-main();
+main().then();

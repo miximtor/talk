@@ -62,7 +62,7 @@ class WebSocketSessionManager {
         this.session_by_account_id.set(session.get_account_id(), session);
     };
 
-    public remove_by_session(session: WebSocketSession) {
+    public remove(session: WebSocketSession) {
         WebSocketSessionManager.logger.log.info(`${this.manager_id} remove ${session.get_token()}-${session.get_account_id()}`);
         this.session_by_token.delete(session.get_token());
         this.session_by_account_id.delete(session.get_account_id());

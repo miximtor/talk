@@ -1,18 +1,20 @@
 import * as WebSocket from 'ws';
 
-import {Manager} from "./websocket-session-manager";
 import {Logger} from "../util/log";
 import {v4 as UUIDv4} from 'uuid';
 import {Token} from "../util/token";
 import Timeout = NodeJS.Timeout;
 import {promisify} from "util";
 import {RedisClient} from "../util/redis";
+import {queue} from "../util/message-queue";
+import * as AMQP from "amqplib";
 
 export class WebSocketSession {
     private logger: Logger;
     private readonly session_id: string;
     private token: Token;
     private timeout: Timeout = null;
+    private message_channel: AMQP.Channel;
 
     constructor(private socket: WebSocket, token: string, private readonly account_id: number) {
         this.logger = new Logger(this.constructor.name);
@@ -21,9 +23,31 @@ export class WebSocketSession {
         this.logger.log.info(`${this.session_id} created`);
     }
 
-    public run() {
+    public async run() {
+        this.message_channel = await queue.associate_receive_queue(this.account_id, msg => {
+            const message = JSON.parse(msg.content.toString('utf8'));
+            this.socket.send(JSON.stringify(message));
 
-        Manager.register(this);
+            const retry_policy = [4000, 8000, 16000, 32000, 32000, 32000, 32000];
+            const retry_message = async (policy_step: number) => {
+                const result = await promisify(RedisClient.get).bind(RedisClient)(`message:${message.message_id}`);
+                if (result === 'accepted') {
+                    await promisify(RedisClient.del).bind(RedisClient)(`message:${message.message_id}`);
+                    return;
+                }
+
+                if (policy_step >= retry_policy.length) {
+                    this.socket.close(4004, 'message timeout');
+                    return;
+                }
+
+                this.socket.send(JSON.stringify(message));
+                setTimeout(retry_message, retry_policy[policy_step + 1], policy_step + 1);
+            };
+
+            setTimeout(retry_message, retry_policy[0], 0);
+        });
+
 
         this.timeout = setTimeout(async () => {
             this.socket.close(4002, 'server timeout');
@@ -71,8 +95,8 @@ export class WebSocketSession {
     private async on_close(code: number, reason: string) {
         this.logger.log.info(`${this.session_id} closed ${code}-"${reason}"`);
         await this.token.invalidate();
+        await this.message_channel.close();
         clearTimeout(this.timeout);
-        Manager.remove_by_session(this);
     }
 
     private async on_message(message) {
