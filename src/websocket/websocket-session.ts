@@ -12,9 +12,10 @@ import * as AMQP from "amqplib";
 export class WebSocketSession {
     private logger: Logger;
     private readonly session_id: string;
+    private static readonly retry_policy = [8000, 8000, 16000, 32000, 32000, 32000, 32000];
     private token: Token;
-    private timeout: Timeout = null;
     private message_channel: AMQP.Channel;
+    private timeout: Timeout;
 
     constructor(private socket: WebSocket, token: string, private readonly account_id: number) {
         this.logger = new Logger(this.constructor.name);
@@ -24,30 +25,34 @@ export class WebSocketSession {
     }
 
     public async run() {
-        this.message_channel = await queue.associate_receive_queue(this.account_id, msg => {
+        this.message_channel = await queue.create_receive_channel();
+        await this.message_channel.consume(`message-queue-${this.account_id}`, msg => {
             const message = JSON.parse(msg.content.toString('utf8'));
             this.socket.send(JSON.stringify(message));
 
-            const retry_policy = [4000, 8000, 16000, 32000, 32000, 32000, 32000];
             const retry_message = async (policy_step: number) => {
-                const result = await promisify(RedisClient.get).bind(RedisClient)(`message:${message.message_id}`);
-                if (result === 'accepted') {
-                    await promisify(RedisClient.del).bind(RedisClient)(`message:${message.message_id}`);
+                if (this.socket.readyState !== WebSocket.OPEN) {
                     return;
                 }
 
-                if (policy_step >= retry_policy.length) {
+                const result = await promisify(RedisClient.get).bind(RedisClient)(`message:${message.message_id}-${message.version}`);
+                if (result === 'accepted') {
+                    await promisify(RedisClient.del).bind(RedisClient)(`message:${message.message_id}-${message.version}`);
+                    await this.message_channel.ack(msg);
+                    return;
+                }
+
+                if (policy_step >= WebSocketSession.retry_policy.length) {
                     this.socket.close(4004, 'message timeout');
                     return;
                 }
 
                 this.socket.send(JSON.stringify(message));
-                setTimeout(retry_message, retry_policy[policy_step + 1], policy_step + 1);
+                setTimeout(retry_message, WebSocketSession.retry_policy[policy_step + 1], policy_step + 1);
+
             };
-
-            setTimeout(retry_message, retry_policy[0], 0);
+            setTimeout(retry_message, WebSocketSession.retry_policy[0], 0);
         });
-
 
         this.timeout = setTimeout(async () => {
             this.socket.close(4002, 'server timeout');
@@ -64,9 +69,8 @@ export class WebSocketSession {
         });
 
         this.socket.on("message", async (data: string) => {
-            const message = JSON.parse(data);
-
             clearTimeout(this.timeout);
+            const message = JSON.parse(data);
             this.timeout = setTimeout(async () => {
                 this.socket.close(4002, 'server timeout');
             }, 120000);
@@ -83,18 +87,10 @@ export class WebSocketSession {
 
     }
 
-    public notify_close(code, reason) {
-        this.socket.close(code, reason);
-    }
-
-    public push(message) {
-        this.logger.log.info(`${this.session_id} push ${JSON.stringify(message)}`);
-        this.socket.send(JSON.stringify(message));
-    }
-
     private async on_close(code: number, reason: string) {
         this.logger.log.info(`${this.session_id} closed ${code}-"${reason}"`);
         await this.token.invalidate();
+        await this.message_channel.nackAll(true);
         await this.message_channel.close();
         clearTimeout(this.timeout);
     }
@@ -103,7 +99,7 @@ export class WebSocketSession {
         if (message.type === 'keepalive') {
             return;
         } else if (message.type === 'message-accept') {
-            await promisify(RedisClient.set).bind(RedisClient)(`message:${message.message_id}`, 'accepted');
+            await promisify(RedisClient.set).bind(RedisClient)(`message:${message.message_id}-${message.version}`, 'accepted');
         }
     }
 

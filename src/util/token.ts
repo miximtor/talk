@@ -9,7 +9,8 @@ const white_list: Array<string> = [
     '/account/login',
     '/account/checkloginid',
     '/account/register',
-    '/account/getsecurityquestion'
+    '/account/getsecurityquestion',
+    '/account/resetpassword'
 ];
 
 export class Token {

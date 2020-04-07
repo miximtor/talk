@@ -10,6 +10,8 @@ import {Token} from "./util/token";
 import {pool_alloc} from "./util/postgres";
 import {queue} from "./util/message-queue";
 
+import {ExpressPeerServer} from "peer";
+
 async function main() {
     const service = new WebSocketService();
     const app = express();
@@ -25,8 +27,8 @@ async function main() {
     app.use("/relation", relation_router);
     app.use("/message", message_router);
 
-
     service.run();
+
     app.listen(3000, () => {
         logger.log.info('listening on port 3000');
     });

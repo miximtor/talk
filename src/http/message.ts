@@ -2,11 +2,8 @@ import {Logger} from "../util/log";
 
 import * as express from 'express';
 
-import {RedisClient} from "../util/redis";
-
 import {v4 as UUIDv4} from 'uuid';
 
-import {promisify} from "util";
 import {queue} from "../util/message-queue";
 
 class MessageRouter {
@@ -23,13 +20,18 @@ class MessageRouter {
     async send(req: express.Request, res: express.Response) {
         let conn = res.locals.db_conn;
         const message = req.body.message;
+
         let result = await conn.query("select account_id, account_type from talk.account where login_id = $1 limit 1", [message.to]);
-        if (result.rows[0].account_type === 'personal') {
-            delete message.token;
-            await queue.public(message, result.rows[0].account_id);
-            res.send({ok: true});
-        } else {
+        const account_type = result.rows[0].account_type;
+        const account_id = result.rows[0].account_id;
+
+        result = await conn.query("select relation_id from talk.relation where master_account_id = $1 and slave_account_id = $2 and relation_identity = 'friend'", [account_id, res.locals.account_id]);
+
+        if (account_type === 'personal' && result.rows.length > 0) {
+            await queue.public(account_id, message);
         }
+
+        res.send({ok: true});
     }
 
 }

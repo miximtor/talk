@@ -61,3 +61,7 @@ services:
         ports:
             - "127.0.0.1:15672:15672"
         restart: always
+
+    voip:
+        image: "peerjs/peerjs-server:0.5.1"
+        restart: always

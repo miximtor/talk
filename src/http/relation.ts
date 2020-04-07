@@ -3,9 +3,7 @@ import {Logger} from "../util/log";
 import * as express from 'express';
 
 import {v4 as UUIDv4} from 'uuid';
-import {PostgresPool} from "../util/postgres";
-import {promisify} from "util";
-import {RedisClient} from "../util/redis";
+import {queue} from "../util/message-queue";
 
 class RelationRouter {
     public router;
@@ -16,6 +14,9 @@ class RelationRouter {
         this.router = express.Router();
         this.router.post('/getcontacts', (req, res) => this.get_contacts(req, res));
         this.router.post('/search', (req, res) => this.search(req, res));
+        this.router.post('/addfriend', (req, res) => this.add_friend(req, res));
+        this.router.post('/deletefriend', (req, res) => this.delete_friend(req, res));
+        this.router.post('/addfriendreply', (req, res) => this.add_friend_reply(req, res));
         this.router_id = UUIDv4();
     }
 
@@ -40,21 +41,82 @@ class RelationRouter {
 
     async add_friend(req: express.Request, res: express.Response) {
         const conn = res.locals.db_conn;
-        let result = await conn.query("select account_id, from talk.account where login_id = $1 limit 1", [req.body.slave_login_id]);
+        let result = await conn.query("select account_id from talk.account where login_id = $1 limit 1", [req.body.slave_login_id]);
         const message = {
             message_id: UUIDv4(),
-            from: 'system',
-            sender: 'system',
+            from: 'sys',
+            sender: 'sys',
             to: req.body.slave_login_id,
-            type: 'system-add-friend',
+            type: 'message-add-friend',
             timestamp: Date.now(),
-            to_account_id: result.rows[0].account_id,
             content: {
                 who: req.body.master_login_id,
-                description: req.body.description
-            }
+                description: req.body.description,
+                state: 'wait'
+            },
+            version: 1
         };
-        await promisify(RedisClient.publish).bind(RedisClient)('message', JSON.stringify(message));
+        await queue.public(result.rows[0].account_id, message);
+        res.send({ok: true});
+    }
+
+    async add_friend_reply(req: express.Request, res :express.Response) {
+        const conn = res.locals.db_conn;
+        const state = req.body.state;
+        const message = req.body.message;
+
+        message.version++;
+        message.content.state = state;
+
+        const result = await conn.query("select account_id from talk.account where login_id = $1 limit 1", [message.content.who]);
+        const sender_account_id = result.rows[0].account_id;
+
+        if (state === 'ok') {
+            await conn.query("insert into talk.relation(relation_type, master_account_id, slave_account_id, relation_identity) values('one-one', $1, $2, 'friend'), ('one-one', $2, $1, 'friend')", [res.locals.account_id, sender_account_id]);
+            const welcome = {
+                message_id: UUIDv4(),
+                from: message.to,
+                sender: message.to,
+                to: message.content.who,
+                type: 'message-welcome',
+                timestamp: Date.now(),
+                content: {
+                    text: '已经是好友了，开始聊天吧！'
+                },
+                version: 1
+            };
+            await queue.public(sender_account_id, welcome);
+            welcome.from = message.content.who;
+            welcome.sender = message.content.who;
+            welcome.to = message.to;
+            await queue.public(res.locals.account_id, welcome);
+        } else if (state === 'refuse') {
+            const reject = {
+                message_id: UUIDv4(),
+                from: 'sys',
+                sender: 'sys',
+                to: message.content.who,
+                type: 'message-add-friend-refuse',
+                timestamp: Date.now(),
+                content: {
+                    who: message.to
+                },
+                version: 1
+            };
+            await queue.public(sender_account_id, reject);
+        } else if (state === 'blacklist') {
+            await conn.query("insert into talk.relation (relation_type, master_account_id, slave_account_id, relation_identity) values('one-one', $1, $2, 'blacklist')", [res.locals.account_id, sender_account_id]);
+        }
+        res.send({ok: true});
+        await queue.public(res.locals.account_id, message);
+
+
+    }
+
+    async delete_friend(req: express.Request, res: express.Response) {
+        const conn = res.locals.db_conn;
+        const result = await conn.query("select account_id from talk.account where login_id = $1 limit 1", [req.body.slave_login_id]);
+        await conn.query("delete from talk.relation where master_account_id = $1 and slave_account_id = $2", [res.locals.account_id, result.rows[0].account_id]);
         res.send({ok: true});
     }
 }

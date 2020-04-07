@@ -29,7 +29,8 @@ create table talk.relation (
 	relation_type varchar(255) default '',
 	master_account_id bigint default 0,
 	slave_account_id bigint default 0,
-	relation_identity varchar(255) default ''
+	relation_identity varchar(255) default '',
+	unique(master_account_id, slave_account_id)
 );
 
 
@@ -68,10 +69,11 @@ select * from talk.contacts;
 select * from talk.relation;
 select * from talk.account;
 select * from talk.account_nonsens;
+delete from talk.relation;
 
-select * from talk.account_nonsens where login_id like '%max%' and login_id not in (select login_id from talk.contacts where master_account_id = 3) and account_id != 3;
+insert into talk.relation(relation_type, master_account_id, slave_account_id, relation_identity) values('one-one', 14, 15, 'friend'),('one-one', 15, 14, 'friend');
+insert into talk.relation (relation_type, master_account_id, slave_account_id, relation_identity) values('one-one', 14, 15, 'blacklist') 
+on conflict(master_account_id, slave_account_id) do update set relation_identity = 'blacklist';
 
-insert into talk.relation(relation_type, master_account_id, slave_account_id, relation_identity) values('one-one', 11, 12, 'friend');
-insert into talk.relation(relation_type, master_account_id, slave_account_id, relation_identity) values('one-one', 12, 11, 'friend');
-insert into talk.relation(relation_type, master_account_id, slave_account_id, relation_identity) values('one-one', 3, 4, 'friend');
-insert into talk.relation(relation_type, master_account_id, slave_account_id, relation_identity) values('one-one', 4, 3, 'friend');
+
+update from talk.account set phone = 1;

@@ -21,6 +21,7 @@ class AccountRouter {
         this.router.post('/getpersonalinfo', (req,res) => this.get_personal_info(req, res));
         this.router.post('/updatepersonalinfo', (req, res) => this.update_personal_info(req, res));
         this.router.post('/getsecurityquestion', (req, res) => this.get_security_question(req, res));
+        this.router.post('/resetpassword', (req, res) => this.reset_password(req, res));
         this.router_id = UUIDv4();
     }
 
@@ -110,16 +111,24 @@ class AccountRouter {
         }
     }
 
-    async validate_security_question(req: express.Request, res: express.Response) {
+    async reset_password(req: express.Request, res: express.Response) {
         const conn = res.locals.db_conn;
         const hash = require('password-hash');
-        const result = await conn.query("select answer1, answer2, answer3 from talk.account where login_id = $1 limit 1",[req.body.login_id]);
-        if (result.rows.length < 1) {
-            res.send({ok: false, reason: '账号不存在'});
+        const result = await conn.query("select answer1, answer2, answer3 from talk.account where login_id = $1 limit 1", [req.body.login_id]);
+        const answer1 = result.rows[0].answer1;
+        const answer2 = result.rows[0].answer2;
+        const answer3 = result.rows[0].answer3;
+        const good_answer1 = hash.verify(req.body.answer1, answer1);
+        const good_answer2 = hash.verify(req.body.answer2, answer2);
+        const good_answer3 = hash.verify(req.body.answer3, answer3);
+        if (!(good_answer1 && good_answer2 && good_answer3)) {
+            res.send({ok: false, reason: '回答错误'});
+            return;
         }
 
+        await conn.query("update talk.account set login_password = $1 where login_id = $2", [hash.generate(req.body.login_password), req.body.login_id]);
+        res.send({ok: true});
     }
-
 }
 
 export const account_router = new AccountRouter().router;
