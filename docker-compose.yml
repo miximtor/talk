@@ -56,10 +56,8 @@ services:
         restart: always
 
     rabbitmq:
-        image: "rabbitmq:3.8.3-management"
+        image: "rabbitmq:3.8.3"
         hostname: "rabbitmq"
-        ports:
-            - "127.0.0.1:15672:15672"
         restart: always
 
     voip:
