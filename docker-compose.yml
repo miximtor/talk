@@ -65,3 +65,5 @@ services:
     voip:
         image: "peerjs/peerjs-server:0.5.1"
         restart: always
+        ports:
+            - "9000:9000"
