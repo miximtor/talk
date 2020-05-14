@@ -16,7 +16,9 @@ async function main() {
     const service = new WebSocketService();
     const app = express();
 
+
     await queue.init();
+
 
     const logger = new Logger('HTTPService');
     app.use(express.json());

@@ -9,7 +9,14 @@ class MessageQueue {
 
 
     async init() {
-        this.connection = await AMQP.connect('amqp://rabbitmq');
+        let connected = false;
+        while (!connected) {
+            try {
+                this.connection = await AMQP.connect('amqp://rabbitmq');
+                connected = true;
+            } catch (e) {
+            }
+        }
         this.push_channel = await this.connection.createChannel();
         this.operation_channel = await this.connection.createChannel();
         await this.push_channel.assertExchange(MessageQueue.MESSAGE_EXCHANGE, 'topic', {
