@@ -1,3 +1,4 @@
+create schema talk;
 
 drop table if exists talk.account cascade;
 create table talk.account (

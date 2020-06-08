@@ -17,6 +17,7 @@ class RelationRouter {
         this.router.post('/addfriend', (req, res) => this.add_friend(req, res));
         this.router.post('/deletefriend', (req, res) => this.delete_friend(req, res));
         this.router.post('/addfriendreply', (req, res) => this.add_friend_reply(req, res));
+        this.router.post('/blacklistfriend', (req, res) => this.blacklist_friend(req, res));
         this.router_id = UUIDv4();
     }
 
@@ -110,13 +111,19 @@ class RelationRouter {
         res.send({ok: true});
         await queue.public(res.locals.account_id, message);
 
-
     }
 
     async delete_friend(req: express.Request, res: express.Response) {
         const conn = res.locals.db_conn;
         const result = await conn.query("select account_id from talk.account where login_id = $1 limit 1", [req.body.slave_login_id]);
         await conn.query("delete from talk.relation where master_account_id = $1 and slave_account_id = $2", [res.locals.account_id, result.rows[0].account_id]);
+        res.send({ok: true});
+    }
+
+    async blacklist_friend(req: express.Request, res: express.Response) {
+        const conn = res.locals.db_conn;
+        const result = await conn.query("select account_id from talk.account where login_id = $1 limit 1", [req.body.slave_login_id]);
+        await conn.query("update talk.relation set relation_identity = 'blacklist' where master_account_id = $1 and slave_account_id = $2", [res.locals.account_id, result.rows[0].account_id])
         res.send({ok: true});
     }
 }
