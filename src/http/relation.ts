@@ -43,6 +43,8 @@ class RelationRouter {
     async add_friend(req: express.Request, res: express.Response) {
         const conn = res.locals.db_conn;
         let result = await conn.query("select account_id from talk.account where login_id = $1 limit 1", [req.body.slave_login_id]);
+        const slave_account_id = result.rows[0].account_id;
+
         const message = {
             message_id: UUIDv4(),
             from: 'sys',
@@ -57,7 +59,7 @@ class RelationRouter {
             },
             version: 1
         };
-        await queue.public(result.rows[0].account_id, message);
+        await queue.public(slave_account_id, message);
         res.send({ok: true});
     }
 

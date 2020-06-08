@@ -29,6 +29,17 @@ class MessageRouter {
 
         if (account_type === 'personal' && result.rows.length > 0) {
             await queue.public(account_id, message);
+        } else {
+            await queue.public(res.locals.account_id, {
+                message_id: UUIDv4(),
+                from: message.to,
+                sender: message.to,
+                to: message.sender,
+                type: 'message-text',
+                content: {
+                    text: 'Ta不是你好友哦，消息发送失败'
+                }
+            });
         }
 
         res.send({ok: true});
