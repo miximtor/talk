@@ -32,6 +32,7 @@ class MessageRouter {
         } else {
             await queue.public(res.locals.account_id, {
                 message_id: UUIDv4(),
+                timestamp: Date.now(),
                 from: message.to,
                 sender: message.to,
                 to: message.sender,
@@ -39,7 +40,7 @@ class MessageRouter {
                 content: {
                     text: 'Ta不是你好友哦，消息发送失败'
                 },
-                version: 1
+                version: 1,
             });
         }
 
