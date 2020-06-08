@@ -38,7 +38,8 @@ class MessageRouter {
                 type: 'message-text',
                 content: {
                     text: 'Ta不是你好友哦，消息发送失败'
-                }
+                },
+                version: 1
             });
         }
 
