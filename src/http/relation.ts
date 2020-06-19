@@ -44,22 +44,24 @@ class RelationRouter {
         const conn = res.locals.db_conn;
         let result = await conn.query("select account_id from talk.account where login_id = $1 limit 1", [req.body.slave_login_id]);
         const slave_account_id = result.rows[0].account_id;
-
-        const message = {
-            message_id: UUIDv4(),
-            from: 'sys',
-            sender: 'sys',
-            to: req.body.slave_login_id,
-            type: 'message-add-friend',
-            timestamp: Date.now(),
-            content: {
-                who: req.body.master_login_id,
-                description: req.body.description,
-                state: 'wait'
-            },
-            version: 1
-        };
-        await queue.public(slave_account_id, message);
+        result = await conn.query("select * from talk.relation where master_login_id = $1 and slave_login_id = $2", [res.locals.account_id, slave_account_id]);
+        if (result.rows.length <= 0) {
+            const message = {
+                message_id: UUIDv4(),
+                from: 'sys',
+                sender: 'sys',
+                to: req.body.slave_login_id,
+                type: 'message-add-friend',
+                timestamp: Date.now(),
+                content: {
+                    who: req.body.master_login_id,
+                    description: req.body.description,
+                    state: 'wait'
+                },
+                version: 1
+            };
+            await queue.public(slave_account_id, message);
+        }
         res.send({ok: true});
     }
 
