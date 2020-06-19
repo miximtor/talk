@@ -44,7 +44,7 @@ class RelationRouter {
         const conn = res.locals.db_conn;
         let result = await conn.query("select account_id from talk.account where login_id = $1 limit 1", [req.body.slave_login_id]);
         const slave_account_id = result.rows[0].account_id;
-        result = await conn.query("select * from talk.relation where master_login_id = $1 and slave_login_id = $2", [slave_account_id, res.locals.account_id]);
+        result = await conn.query("select * from talk.relation where master_account_id = $1 and slave_account_id = $2", [slave_account_id, res.locals.account_id]);
         if (result.rows.length <= 0) {
             const message = {
                 message_id: UUIDv4(),

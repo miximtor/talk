@@ -71,6 +71,7 @@ select * from talk.relation;
 select * from talk.account;
 select * from talk.account_nonsens;
 delete from talk.relation;
+delete from talk.account ;
 
 insert into talk.relation(relation_type, master_account_id, slave_account_id, relation_identity) values('one-one', 14, 15, 'friend'),('one-one', 15, 14, 'friend');
 insert into talk.relation (relation_type, master_account_id, slave_account_id, relation_identity) values('one-one', 14, 15, 'blacklist') 
